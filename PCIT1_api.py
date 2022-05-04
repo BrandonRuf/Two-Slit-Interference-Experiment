@@ -1,4 +1,5 @@
 import serial as _serial
+import numpy  as _n
 
 class PCIT1_api():
     """
@@ -16,6 +17,8 @@ class PCIT1_api():
         
     """
     def __init__(self, port='COM4', address=0, baudrate=230400, timeout=15):
+        
+        self.n = 0
         
         if not _serial:
             print('You need to install pyserial to use the TeachSpin PCIT1-A.')
@@ -50,11 +53,17 @@ class PCIT1_api():
             Number of counts.
 
         """
-        data = self.device.read_until(expected='\n\r'.encode())
-        data = data.decode()
-        iteration, count = [int(i) for i in data.strip('\n\r').split(',')]
-        return iteration, count
-    
+        if not self.simulation_mode:
+            data = self.device.read_until(expected='\n\r'.encode())
+            data = data.decode()
+            iteration, count = [int(i) for i in data.strip('\n\r').split(',')]
+            
+        else:
+            self.n +=1 if self.n < 65535 else  0
+            iteration = self.n
+            count = int(_n.rint(_n.random.normal(50, 8)))
+
+        return iteration, count    
     def read_all_data(self):
         """
         Reads all data in the input buffer.
@@ -70,12 +79,19 @@ class PCIT1_api():
         iteration_numbers  = []
         counts   = []
         
-        while self.device.in_waiting != 0:
-            iteration, n_counts = self.read_line()
-            
-            iteration_numbers.append(iteration)
-            counts           .append(n_counts)
-            
+        if not self.simulation_mode:
+            while self.device.in_waiting != 0:
+                iteration, n_counts = self.read_line()
+                
+                iteration_numbers.append(iteration)
+                counts           .append(n_counts)
+        else:
+            for i in range(_n.random.randint(1,10)):
+                iteration, n_counts = self.read_line()
+                
+                iteration_numbers.append(iteration)
+                counts           .append(n_counts)
+                
         return iteration_numbers, counts
             
         
