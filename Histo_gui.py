@@ -19,7 +19,7 @@ from spinmob.egg._gui import Button, ComboBox, NumberBox, Label, TextBox
 _g = _egg.gui
 
 from serial.tools.list_ports import comports as _comports
-from auber_controller_api    import auber_syl53x2p_api
+from PCIT1_api    import PCIT1_api
 
 # GUI settings
 _s.settings['dark_theme_qt'] = True
@@ -41,7 +41,7 @@ class serial_gui_base(_g.BaseObject):
     Parameters
     ----------
     api_class=None : class
-        Class to use when connecting. For example, api_class=auber_syl53x2p_api would
+        Class to use when connecting. For example, api_class=PCIT1_api would
         work. Note this is not an instance, but the class itself. An instance is
         created when you connect and stored in self.api.
         
@@ -60,7 +60,7 @@ class serial_gui_base(_g.BaseObject):
     hide_address=False: bool
         Whether to show the address control for things like the Auber.
     """
-    def __init__(self, api_class=auber_syl53x2p_api, name='serial_gui', show=True, block=False, window_size=[1,1], hide_address=False):
+    def __init__(self, api_class = PCIT1_api, name='serial_gui', show=True, block=False, window_size=[1,1], hide_address=False):
 
         # Remebmer the name.
         self.name = name
@@ -110,12 +110,12 @@ class serial_gui_base(_g.BaseObject):
 
         self.grid_top.add(_g.Label('Baud:'))
         self.combo_baudrates = self.grid_top.add(_g.ComboBox(
-            ['1200', '2400', '4800', '9600', '19200'],
+            ['9600','57600', '115200','230400'],
             default_index=3,
             autosettings_path=name+'.combo_baudrates'))
 
         self.grid_top.add(_g.Label('Timeout:'))
-        self.number_timeout = self.grid_top.add(_g.NumberBox(2000, dec=True, bounds=(1, None), suffix=' ms', tip='How long to wait for an answer before giving up (ms).', autosettings_path=name+'.number_timeout')).set_width(100)
+        self.number_timeout = self.grid_top.add(_g.NumberBox(15, dec=True, bounds=(1, None), suffix='s', tip='How long to wait for an answer before giving up (ms).', autosettings_path=name+'.number_timeout')).set_width(100)
 
         # Button to connect
         self.button_connect  = self.grid_top.add(_g.Button('Connect', checkable=True))
@@ -203,7 +203,6 @@ class serial_gui_base(_g.BaseObject):
             port = self.get_selected_port()
             self.api = self._api_class(
                     port=port,
-                    address=self.number_address.get_value(),
                     baudrate=int(self.combo_baudrates.get_text()),
                     timeout=self.number_timeout.get_value())
 
@@ -305,7 +304,7 @@ class serial_gui_base(_g.BaseObject):
 
 class histo(serial_gui_base):
 
-    def __init__(self, name='histo', api = auber_syl53x2p_api, show=True, block=False, window_size=[1,300]):
+    def __init__(self, name='PCIT1-A', api = PCIT1_api, show=True, block=False, window_size=[1,300]):
 
 
         # Run the base class stuff, which shows the window at the end.
@@ -348,14 +347,12 @@ class histo(serial_gui_base):
         
         # Get the time, temperature, and setpoint
         t = current_time - self.t0
-        T = self.api.get_temperature()
-        S = self.api.get_temperature_setpoint()
-        P = self.api.get_main_output_power()    
+        N, C = self.api.read_all_data()  
         
-        # Append this to the databox
-        self.plot.append_row([t, T], ckeys=['Time (s)', 'Temperature (C)'])
+        for i in range(len(C)):
+            # Append this to the databox
+            self.plot.append_row([t, C[i]], ckeys=['Time (s)', 'Counts (C)'])
         self.plot.plot()
-
 
         # Update the GUI
         self.window.process_events()
@@ -1100,7 +1097,7 @@ class DataboxPlot(_d.databox, _g.GridLayout):
             x = list(x)
             y = list(y)
             
-            y, x = _n.histogram(y,bins = _n.linspace(24,25,21))
+            y, x = _n.histogram(y,bins = _n.linspace(min(y),max(y),(max(y)-min(y))+1))
             
             
 
@@ -1230,6 +1227,7 @@ class DataboxPlot(_d.databox, _g.GridLayout):
         # don't update anything until we're done
         self.grid_plot.block_signals()
 
+        
         # clear the plots
         while len(self.plot_widgets):
 
@@ -1333,4 +1331,3 @@ class DataboxPlot(_d.databox, _g.GridLayout):
 if __name__ == '__main__':
     _egg.clear_egg_settings()
     self = histo()
-    self.button_connect.click()
