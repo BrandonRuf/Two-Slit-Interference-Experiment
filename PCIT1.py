@@ -309,7 +309,7 @@ class histo(serial_gui_base):
         serial_gui_base.__init__(self, api_class=api, name=name, show=False, window_size=window_size)
         
         self.window.set_size([0,0])
-
+        
         # Build the GUI
         self.gui_components(name)
         
@@ -355,6 +355,8 @@ class histo(serial_gui_base):
         """
         current_time = _time.time()
         
+        
+        
         # Get the time, temperature, and setpoint
         t = current_time - self.t0
         N, C = self.api.read_all_data()  
@@ -362,7 +364,9 @@ class histo(serial_gui_base):
         for i in range(len(C)):
             # Append this to the databox
             self.plot.append_row([t, C[i]], ckeys=['Time (s)', 'Counts (C)'])
+            self.scatter.append_row([N[i], C[i]], ckeys=['Number', 'Counts (C)'])
         self.plot.plot()
+        self.scatter.plot()
 
         self._update_integrated_counts()
         self._update_mean()
@@ -418,6 +422,12 @@ class histo(serial_gui_base):
             file_type='*.csv',
             autosettings_path=name+'.plot',
             delimiter=',', styles = [dict(pen=(0,1)), dict(pen=None, symbol='o')], alignment=0))
+        
+        # Add data plotting to main tab
+        self.scatter = self.tab_scatter.add(_g.DataboxPlot(
+            file_type='*.csv',
+            autosettings_path=name+'.plot',
+            delimiter=','), alignment=0)
         
         self.window.set_row_stretch(2, 100)
         
